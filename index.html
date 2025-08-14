@@ -1,0 +1,149 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0b0f19" />
+<title>GPS Pakito – Navegador de Rotas GPX</title>
+<link rel="manifest" href="manifest.webmanifest" />
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<style>
+:root {
+  color-scheme: dark;
+  --bg:#0b0f19;
+  --panel:#121829;
+  --text:#e5e7eb;
+  --muted:#9aa4b2;
+  --accent:#22c55e;
+  --danger:#ef4444;
+  --border:rgba(255,255,255,.08);
+}
+* { box-sizing: border-box; }
+html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; }
+.App { display:grid; grid-template-rows:auto 1fr auto; height:100dvh; }
+
+header {
+  display:flex; gap:12px; align-items:center; padding:12px 14px;
+  background: linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,0));
+  border-bottom: 1px solid var(--border);
+}
+.brand { font-weight:900; letter-spacing:.5px; }
+.badge { font-size:12px; padding:3px 8px; background:rgba(34,197,94,.15); border:1px solid #1c6e42; color:#86efac; border-radius:999px; }
+.grow { flex:1; }
+.controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+select, button, input[type="checkbox"] + label {
+  background:var(--panel); color:var(--text); border:1px solid var(--border);
+  border-radius:10px; padding:10px 12px; font-weight:600;
+}
+button.primary { border-color: var(--accent); }
+button.danger { border-color: rgba(239,68,68,.5); }
+
+main { position:relative; }
+#map { position:absolute; inset:0; }
+
+aside.panel {
+  position:absolute; top:12px; left:12px; width:320px; max-width:calc(100% - 24px);
+  background:rgba(18,24,41,.92); backdrop-filter: blur(8px);
+  border:1px solid var(--border); border-radius:16px; padding:12px; display:grid; gap:10px;
+}
+.row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.row > * { flex:1; min-width:0; }
+.small { font-size:12px; color:var(--muted); }
+.kpi { display:flex; gap:12px; flex-wrap:wrap; }
+.kpi .card { background:rgba(255,255,255,.03); padding:8px 10px; border:1px solid var(--border); border-radius:10px; font-size:12px; }
+
+footer {
+  display:flex; gap:8px; align-items:center; justify-content:space-between;
+  padding:8px 12px; border-top:1px solid var(--border);
+  background: linear-gradient(0deg, rgba(0,0,0,.6), rgba(0,0,0,0));
+}
+footer .right { display:flex; gap:8px; align-items:center; }
+
+.toast {
+  position: fixed; bottom: 16px; left:50%; transform:translateX(-50%);
+  background: rgba(34,197,94,.15); border: 1px solid #1c6e42; color:#86efac;
+  padding:10px 14px; border-radius:12px; display:none;
+}
+.turn-dot { width:12px; height:12px; border-radius:50%; background:#f59e0b; border:2px solid rgba(0,0,0,.6); }
+.line { height:2px; background:#64748b; flex:1; opacity:.6; }
+
+/* Light mode override */
+@media (prefers-color-scheme: light) {
+  :root { --bg:#f8fafc; --panel:#ffffff; --text:#0f172a; --muted:#475569; --border:rgba(15,23,42,.12); }
+  .toast { background: rgba(34,197,94,.15); color:#166534; border-color:#16a34a; }
+}
+</style>
+</head>
+<body>
+<div class="App">
+  <header>
+    <div class="brand">GPS Pakito – Navegador GPX</div>
+    <span class="badge">OFFLINE</span>
+    <div class="grow"></div>
+    <div class="controls">
+      <select id="routeSelect"></select>
+      <button id="btnFav">☆ Favoritar</button>
+      <button id="btnReload">Atualizar rotas</button>
+      <button id="btnInstall" style="display:none">Instalar</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="map"></div>
+
+    <aside class="panel" id="panel">
+      <div class="row">
+        <div class="small">Rota:</div>
+        <div id="routeName">—</div>
+      </div>
+      <div class="kpi">
+        <div class="card">Dist.: <b id="routeDist">0 km</b></div>
+        <div class="card">Pts: <b id="routePts">0</b></div>
+        <div class="card">Status: <b id="navStatus">parado</b></div>
+      </div>
+      <div class="row">
+        <button id="btnStart" class="primary">Iniciar navegação</button>
+        <button id="btnStop" class="danger">Parar</button>
+      </div>
+      <div class="row">
+        <div class="turn-dot"></div><div class="line"></div>
+        <div class="small" id="nextTurnText">Sem instruções</div>
+      </div>
+      <div class="small" id="gpsText">GPS: aguardando…</div>
+    </aside>
+
+    <div class="toast" id="toast">Novas rotas detectadas. Clique em "Atualizar rotas".</div>
+  </main>
+
+  <footer>
+    <div class="small">Carregado local · <span id="cacheInfo">—</span></div>
+    <div class="right">
+      <label class="small"><input type="checkbox" id="chkVoice" checked /> Falar instruções</label>
+      <button id="btnDark">Tema</button>
+    </div>
+  </footer>
+</div>
+
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}
+
+// PWA install prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('btnInstall');
+  btn.style.display = 'inline-block';
+  btn.onclick = async () => { deferredPrompt.prompt(); deferredPrompt = null; btn.style.display='none'; };
+});
+</script>
+</body>
+</html>

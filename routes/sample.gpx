@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="GPX Navigator" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk><name>Exemplo</name><trkseg>
+    <trkpt lat="-23.55052" lon="-46.63331"></trkpt>
+    <trkpt lat="-23.55100" lon="-46.63250"></trkpt>
+    <trkpt lat="-23.55150" lon="-46.63180"></trkpt>
+    <trkpt lat="-23.55200" lon="-46.63110"></trkpt>
+  </trkseg></trk>
+</gpx>
