@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Gerador de routes.json</title>
+<style>
+body {font-family: sans-serif; background: #0b0f19; color: #fff; text-align: center; padding: 20px;}
+input {margin: 20px 0;}
+textarea {width: 80%; height: 300px; margin-top: 20px; background: #121829; color: #0f0; border: none; padding: 10px;}
+button {background: #22c55e; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer;}
+</style>
+</head>
+<body>
+<h1>Gerador de routes.json</h1>
+<p>Selecione seus arquivos GPX para gerar o JSON:</p>
+<input type="file" id="fileInput" multiple accept=".gpx">
+<br>
+<button onclick="downloadJSON()">Baixar routes.json</button>
+<br>
+<textarea id="output" readonly></textarea>
+
+<script>
+let routes = [];
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    routes = [];
+    for (let file of e.target.files) {
+        routes.push({
+            file: file.name,
+            name: file.name.replace('.gpx', '')
+        });
+    }
+    document.getElementById('output').value = JSON.stringify(routes, null, 2);
+});
+
+function downloadJSON() {
+    const blob = new Blob([JSON.stringify(routes, null, 2)], {type: "application/json"});
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "routes.json";
+    link.click();
+}
+</script>
+</body>
+</html>
