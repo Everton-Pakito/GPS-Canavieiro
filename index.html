@@ -1,1 +1,69 @@
-[INDEX_HTML_CONTENT]
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#0b0f19" />
+<title>GPS Canavieiro</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+:root {
+  color-scheme: dark;
+  --bg:#0b0f19; --panel:#121829; --text:#e5e7eb;
+  --muted:#9aa4b2; --accent:#22c55e; --danger:#ef4444; --border:rgba(255,255,255,.08);
+}
+html, body {margin:0; height:100%; background:var(--bg); color:var(--text); font-family:sans-serif;}
+#map {position:absolute; inset:0;}
+.hidden {opacity:0; pointer-events:none; transition:opacity .3s;}
+aside.panel {
+  position:absolute; top:12px; left:12px; width:320px; background:rgba(18,24,41,.92);
+  border:1px solid var(--border); border-radius:16px; padding:12px;
+}
+aside.panel button { display:inline-block; margin-right:8px; margin-top:8px; }
+.hud-alert {
+  position:fixed; top:10px; left:50%; transform:translateX(-50%);
+  background:rgba(255, 193, 7, 0.9); color:#000; font-weight:bold;
+  padding:10px 20px; border-radius:8px; font-size:18px; display:none; z-index:9999;
+}
+.hud-alert.risk {background:rgba(239,68,68,0.9); color:#fff;}
+/* Força landscape em dispositivos em retrato */
+@media screen and (orientation:portrait) {
+  body {
+    transform: rotate(90deg);
+    transform-origin: left top;
+    width: 100vh;
+    height: 100vw;
+    overflow-x: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<aside class="panel hidden" id="panel">
+  <div><b>Rota:</b> <span id="routeName">—</span></div>
+  <div><b>Dist.:</b> <span id="routeDist">0 km</span></div>
+  <div><b>Pontos:</b> <span id="routePts">0</span></div>
+  <div><b>Status:</b> <span id="navStatus">parado</span></div>
+  <button id="btnStart">Iniciar</button>
+  <button id="btnStop">Parar</button>
+  <a href="routes_generator.html" target="_blank">Gerenciar Rotas</a>
+</aside>
+<div class="hud-alert" id="hudAlert"></div>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+if (screen.orientation && screen.orientation.lock) {
+  screen.orientation.lock('landscape').catch(()=>{});
+}
+document.documentElement.requestFullscreen?.().catch(()=>{});
+</script>
+</body>
+</html>
