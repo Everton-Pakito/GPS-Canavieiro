@@ -16,7 +16,6 @@
 }
 html, body {margin:0; height:100%; background:var(--bg); color:var(--text); font-family:sans-serif;}
 #map {position:absolute; inset:0;}
-.hidden {opacity:0; pointer-events:none; transition:opacity .3s;}
 aside.panel {
   position:absolute; top:12px; left:12px; width:320px; background:rgba(18,24,41,.92);
   border:1px solid var(--border); border-radius:16px; padding:12px;
@@ -45,7 +44,7 @@ aside.panel button { display:inline-block; margin-right:8px; margin-top:8px; }
 </head>
 <body>
 <div id="map"></div>
-<aside class="panel hidden" id="panel">
+<aside class="panel" id="panel">
   <div><b>Rota:</b> <span id="routeName">—</span></div>
   <div><b>Dist.:</b> <span id="routeDist">0 km</span></div>
   <div><b>Pontos:</b> <span id="routePts">0</span></div>

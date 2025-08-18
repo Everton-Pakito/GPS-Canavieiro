@@ -32,15 +32,6 @@ function showHUD(msg, risk = false) {
   }
 }
 
-// Painel
-const panel = document.getElementById('panel');
-function showPanel() {
-  panel.classList.remove('hidden');
-  clearTimeout(panel._hideTimeout);
-  panel._hideTimeout = setTimeout(() => panel.classList.add('hidden'), 5000);
-}
-map.on('click', showPanel);
-
 // Botões
 document.getElementById('btnStart').onclick = () => {
   if (currentRoute) {
