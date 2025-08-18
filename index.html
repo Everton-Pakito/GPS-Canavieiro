@@ -14,17 +14,43 @@
   --bg:#0b0f19; --panel:#121829; --text:#e5e7eb;
   --muted:#9aa4b2; --accent:#22c55e; --danger:#ef4444; --border:rgba(255,255,255,.08);
 }
-html, body {margin:0; height:100%; background:var(--bg); color:var(--text); font-family:sans-serif;}
-#map {position:absolute; inset:0;}
-aside.panel {
-  position:absolute; top:12px; left:12px; width:320px; background:rgba(18,24,41,.92);
-  border:1px solid var(--border); border-radius:16px; padding:12px;
+html, body {
+  margin:0; height:100%;
+  background:var(--bg); color:var(--text);
+  font-family:sans-serif;
 }
-aside.panel button { display:inline-block; margin-right:8px; margin-top:8px; }
+#map {
+  position:absolute;
+  inset:0;
+  z-index:0; /* mapa fica atrás */
+}
+aside.panel {
+  position:absolute;
+  top:12px; left:12px;
+  width:320px;
+  background:rgba(18,24,41,.92);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:12px;
+  z-index:1000; /* painel sempre na frente */
+}
+aside.panel button {
+  display:inline-block;
+  margin-right:8px;
+  margin-top:8px;
+}
 .hud-alert {
-  position:fixed; top:10px; left:50%; transform:translateX(-50%);
-  background:rgba(255, 193, 7, 0.9); color:#000; font-weight:bold;
-  padding:10px 20px; border-radius:8px; font-size:18px; display:none; z-index:9999;
+  position:fixed;
+  top:10px; left:50%;
+  transform:translateX(-50%);
+  background:rgba(255, 193, 7, 0.9);
+  color:#000;
+  font-weight:bold;
+  padding:10px 20px;
+  border-radius:8px;
+  font-size:18px;
+  display:none;
+  z-index:2000; /* HUD acima de tudo */
 }
 .hud-alert.risk {background:rgba(239,68,68,0.9); color:#fff;}
 /* Força landscape em dispositivos em retrato */
@@ -44,6 +70,7 @@ aside.panel button { display:inline-block; margin-right:8px; margin-top:8px; }
 </head>
 <body>
 <div id="map"></div>
+
 <aside class="panel" id="panel">
   <div><b>Rota:</b> <span id="routeName">—</span></div>
   <div><b>Dist.:</b> <span id="routeDist">0 km</span></div>
@@ -53,7 +80,9 @@ aside.panel button { display:inline-block; margin-right:8px; margin-top:8px; }
   <button id="btnStop">Parar</button>
   <a href="routes_generator.html" target="_blank">Gerenciar Rotas</a>
 </aside>
+
 <div class="hud-alert" id="hudAlert"></div>
+
 <script src="app.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
