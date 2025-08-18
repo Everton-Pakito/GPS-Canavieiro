@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor KMZ/KML para GPX</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            animation: slideIn 0.6s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .upload-area:hover::before {
+            left: 100%;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .file-info {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .convert-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .convert-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #f0f0f0;
+            border-radius: 3px;
+            margin: 20px 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4CAF50;
+            color: #2E7D32;
+        }
+
+        .error {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid #f44336;
+            color: #c62828;
+        }
+
+        .download-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .upload-area {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗺️ Conversor KMZ/KML → GPX</h1>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Clique aqui ou arraste um arquivo KMZ/KML</div>
+            <div style="font-size: 0.9rem; color: #999;">Suporta arquivos .kmz e .kml</div>
+        </div>
+        
+        <input type="file" id="fileInput" class="file-input" accept=".kmz,.kml" />
+        
+        <div class="file-info" id="fileInfo">
+            <strong>Arquivo selecionado:</strong> <span id="fileName"></span><br>
+            <strong>Tamanho:</strong> <span id="fileSize"></span>
+        </div>
+        
+        <button class="convert-btn" id="convertBtn" onclick="convertFile()" disabled>
+            Converter para GPX
+        </button>
+        
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let convertedData = null;
+
+        // Event listeners para drag and drop
+        const uploadArea = document.querySelector('.upload-area');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const convertBtn = document.getElementById('convertBtn');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            const validTypes = ['application/vnd.google-earth.kmz', 'application/vnd.google-earth.kml+xml', '.kmz', '.kml'];
+            const fileName = file.name.toLowerCase();
+            
+            if (!fileName.endsWith('.kmz') && !fileName.endsWith('.kml')) {
+                showResult('Erro: Por favor, selecione um arquivo KMZ ou KML válido.', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            fileInfo.style.display = 'block';
+            convertBtn.disabled = false;
+            hideResult();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function convertFile() {
+            if (!selectedFile) return;
+
+            showProgress();
+            convertBtn.disabled = true;
+
+            try {
+                let kmlContent;
+                
+                if (selectedFile.name.toLowerCase().endsWith('.kmz')) {
+                    kmlContent = await extractKmzFile(selectedFile);
+                } else {
+                    kmlContent = await readFileAsText(selectedFile);
+                }
+
+                updateProgress(50);
+                const conversionResult = convertKmlToGpx(kmlContent);
+                updateProgress(100);
+
+                convertedData = {
+                    content: conversionResult.gpxContent,
+                    filename: selectedFile.name.replace(/\.(kmz|kml)$/i, '.gpx'),
+                    stats: conversionResult.stats
+                };
+
+                showConversionSuccess();
+                
+            } catch (error) {
+                console.error('Erro na conversão:', error);
+                showResult(`Erro na conversão: ${error.message}`, 'error');
+            } finally {
+                hideProgress();
+                convertBtn.disabled = false;
+            }
+        }
+
+        function extractKmzFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const zip = await JSZip.loadAsync(e.target.result);
+                        const kmlFile = Object.keys(zip.files).find(name => 
+                            name.toLowerCase().endsWith('.kml')
+                        );
+                        
+                        if (!kmlFile) {
+                            reject(new Error('Arquivo KML não encontrado no KMZ'));
+                            return;
+                        }
+                        
+                        const kmlContent = await zip.files[kmlFile].async('text');
+                        resolve(kmlContent);
+                    } catch (error) {
+                        reject(new Error('Erro ao extrair arquivo KMZ: ' + error.message));
+                    }
+                };
+                reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+                reader.readAsText(file);
+            });
+        }
+
+        function convertKmlToGpx(kmlContent) {
+            const parser = new DOMParser();
+            const kmlDoc = parser.parseFromString(kmlContent, 'text/xml');
+            
+            if (kmlDoc.querySelector('parsererror')) {
+                throw new Error('Arquivo KML inválido ou corrompido');
+            }
+
+            const gpxDoc = document.implementation.createDocument('', '', null);
+            const gpxRoot = gpxDoc.createElement('gpx');
+            gpxRoot.setAttribute('version', '1.1');
+            gpxRoot.setAttribute('creator', 'KMZ/KML to GPX Converter');
+            gpxRoot.setAttribute('xmlns', 'http://www.topografix.com/GPX/1/1');
+            gpxRoot.setAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance');
+            gpxRoot.setAttribute('xsi:schemaLocation', 'http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd');
+            gpxDoc.appendChild(gpxRoot);
+
+            // Metadados
+            const metadata = gpxDoc.createElement('metadata');
+            const name = kmlDoc.querySelector('Document > name, Folder > name');
+            if (name) {
+                const metaName = gpxDoc.createElement('name');
+                metaName.textContent = name.textContent;
+                metadata.appendChild(metaName);
+            }
+            
+            const description = kmlDoc.querySelector('Document > description, Folder > description');
+            if (description) {
+                const metaDesc = gpxDoc.createElement('desc');
+                metaDesc.textContent = description.textContent;
+                metadata.appendChild(metaDesc);
+            }
+
+            const time = gpxDoc.createElement('time');
+            time.textContent = new Date().toISOString();
+            metadata.appendChild(time);
+            gpxRoot.appendChild(metadata);
+
+            let stats = {
+                waypoints: 0,
+                tracks: 0,
+                routes: 0,
+                totalPoints: 0
+            };
+
+            // Converter Placemarks
+            const placemarks = kmlDoc.querySelectorAll('Placemark');
+            placemarks.forEach(placemark => {
+                const point = placemark.querySelector('Point');
+                const lineString = placemark.querySelector('LineString');
+                const polygon = placemark.querySelector('Polygon');
+                const multiGeometry = placemark.querySelector('MultiGeometry');
+
+                if (point) {
+                    // Waypoint
+                    const wpt = createWaypoint(gpxDoc, placemark, point);
+                    if (wpt) {
+                        gpxRoot.appendChild(wpt);
+                        stats.waypoints++;
+                        stats.totalPoints++;
+                    }
+                } else if (lineString) {
+                    // Track
+                    const trk = createTrack(gpxDoc, placemark, lineString);
+                    if (trk) {
+                        gpxRoot.appendChild(trk);
+                        stats.tracks++;
+                        const trkpts = trk.querySelectorAll('trkpt');
+                        stats.totalPoints += trkpts.length;
+                    }
+                } else if (polygon) {
+                    // Converter polígono em track
+                    const outerBoundary = polygon.querySelector('outerBoundaryIs LinearRing');
+                    if (outerBoundary) {
+                        const trk = createTrackFromPolygon(gpxDoc, placemark, outerBoundary);
+                        if (trk) {
+                            gpxRoot.appendChild(trk);
+                            stats.tracks++;
+                            const trkpts = trk.querySelectorAll('trkpt');
+                            stats.totalPoints += trkpts.length;
+                        }
+                    }
+                } else if (multiGeometry) {
+                    // MultiGeometry
+                    const points = multiGeometry.querySelectorAll('Point');
+                    const lineStrings = multiGeometry.querySelectorAll('LineString');
+                    
+                    points.forEach(p => {
+                        const wpt = createWaypoint(gpxDoc, placemark, p);
+                        if (wpt) {
+                            gpxRoot.appendChild(wpt);
+                            stats.waypoints++;
+                            stats.totalPoints++;
+                        }
+                    });
+                    
+                    lineStrings.forEach(ls => {
+                        const trk = createTrack(gpxDoc, placemark, ls);
+                        if (trk) {
+                            gpxRoot.appendChild(trk);
+                            stats.tracks++;
+                            const trkpts = trk.querySelectorAll('trkpt');
+                            stats.totalPoints += trkpts.length;
+                        }
+                    });
+                }
+            });
+
+            // Converter rotas Path
+            const paths = kmlDoc.querySelectorAll('Path');
+            paths.forEach(path => {
+                const rte = createRoute(gpxDoc, path);
+                if (rte) {
+                    gpxRoot.appendChild(rte);
+                    stats.routes++;
+                    const rtepts = rte.querySelectorAll('rtept');
+                    stats.totalPoints += rtepts.length;
+                }
+            });
+
+            // Armazenar estatísticas para retorno
+            const serializer = new XMLSerializer();
+            const gpxContent = serializer.serializeToString(gpxDoc);
+            
+            return {
+                gpxContent: gpxContent,
+                stats: stats
+            };
+        }
+
+        function createWaypoint(gpxDoc, placemark, point) {
+            const coordinates = point.querySelector('coordinates');
+            if (!coordinates) return null;
+
+            const coordText = coordinates.textContent.trim();
+            const coords = coordText.split(',');
+            if (coords.length < 2) return null;
+
+            const wpt = gpxDoc.createElement('wpt');
+            wpt.setAttribute('lat', coords[1].trim());
+            wpt.setAttribute('lon', coords[0].trim());
+
+            if (coords.length >= 3 && coords[2].trim() !== '0') {
+                const ele = gpxDoc.createElement('ele');
+                ele.textContent = coords[2].trim();
+                wpt.appendChild(ele);
+            }
+
+            const name = placemark.querySelector('name');
+            if (name && name.textContent.trim()) {
+                const wptName = gpxDoc.createElement('name');
+                wptName.textContent = name.textContent.trim();
+                wpt.appendChild(wptName);
+            }
+
+            const description = placemark.querySelector('description');
+            if (description && description.textContent.trim()) {
+                const desc = gpxDoc.createElement('desc');
+                desc.textContent = description.textContent.trim();
+                wpt.appendChild(desc);
+            }
+
+            // Adicionar dados estendidos
+            addExtendedData(gpxDoc, wpt, placemark);
+
+            return wpt;
+        }
+
+        function createTrack(gpxDoc, placemark, lineString) {
+            const coordinates = lineString.querySelector('coordinates');
+            if (!coordinates) return null;
+
+            const trk = gpxDoc.createElement('trk');
+
+            const name = placemark.querySelector('name');
+            if (name && name.textContent.trim()) {
+                const trkName = gpxDoc.createElement('name');
+                trkName.textContent = name.textContent.trim();
+                trk.appendChild(trkName);
+            }
+
+            const description = placemark.querySelector('description');
+            if (description && description.textContent.trim()) {
+                const desc = gpxDoc.createElement('desc');
+                desc.textContent = description.textContent.trim();
+                trk.appendChild(desc);
+            }
+
+            const trkseg = gpxDoc.createElement('trkseg');
+            
+            const coordText = coordinates.textContent.trim();
+            const coordLines = coordText.split(/[\s\n]+/);
+            
+            coordLines.forEach(line => {
+                const coords = line.trim().split(',');
+                if (coords.length >= 2) {
+                    const trkpt = gpxDoc.createElement('trkpt');
+                    trkpt.setAttribute('lat', coords[1].trim());
+                    trkpt.setAttribute('lon', coords[0].trim());
+
+                    if (coords.length >= 3 && coords[2].trim() !== '0') {
+                        const ele = gpxDoc.createElement('ele');
+                        ele.textContent = coords[2].trim();
+                        trkpt.appendChild(ele);
+                    }
+
+                    trkseg.appendChild(trkpt);
+                }
+            });
+
+            if (trkseg.children.length > 0) {
+                trk.appendChild(trkseg);
+                addExtendedData(gpxDoc, trk, placemark);
+                return trk;
+            }
+
+            return null;
+        }
+
+        function createTrackFromPolygon(gpxDoc, placemark, linearRing) {
+            const coordinates = linearRing.querySelector('coordinates');
+            if (!coordinates) return null;
+
+            const trk = gpxDoc.createElement('trk');
+
+            const name = placemark.querySelector('name');
+            if (name && name.textContent.trim()) {
+                const trkName = gpxDoc.createElement('name');
+                trkName.textContent = name.textContent.trim() + ' (Polígono)';
+                trk.appendChild(trkName);
+            }
+
+            const trkseg = gpxDoc.createElement('trkseg');
+            
+            const coordText = coordinates.textContent.trim();
+            const coordLines = coordText.split(/[\s\n]+/);
+            
+            coordLines.forEach(line => {
+                const coords = line.trim().split(',');
+                if (coords.length >= 2) {
+                    const trkpt = gpxDoc.createElement('trkpt');
+                    trkpt.setAttribute('lat', coords[1].trim());
+                    trkpt.setAttribute('lon', coords[0].trim());
+
+                    if (coords.length >= 3 && coords[2].trim() !== '0') {
+                        const ele = gpxDoc.createElement('ele');
+                        ele.textContent = coords[2].trim();
+                        trkpt.appendChild(ele);
+                    }
+
+                    trkseg.appendChild(trkpt);
+                }
+            });
+
+            if (trkseg.children.length > 0) {
+                trk.appendChild(trkseg);
+                return trk;
+            }
+
+            return null;
+        }
+
+        function createRoute(gpxDoc, path) {
+            // Implementação para rotas Path (menos comum em KML)
+            return null;
+        }
+
+        function addExtendedData(gpxDoc, element, placemark) {
+            const extendedData = placemark.querySelector('ExtendedData');
+            if (!extendedData) return;
+
+            const extensions = gpxDoc.createElement('extensions');
+            const kmlData = gpxDoc.createElement('kml:ExtendedData');
+            kmlData.setAttribute('xmlns:kml', 'http://www.opengis.net/kml/2.2');
+
+            const simpleData = extendedData.querySelectorAll('Data');
+            simpleData.forEach(data => {
+                const name = data.getAttribute('name');
+                const value = data.querySelector('value');
+                if (name && value) {
+                    const dataElement = gpxDoc.createElement('kml:Data');
+                    dataElement.setAttribute('name', name);
+                    const valueElement = gpxDoc.createElement('kml:value');
+                    valueElement.textContent = value.textContent;
+                    dataElement.appendChild(valueElement);
+                    kmlData.appendChild(dataElement);
+                }
+            });
+
+            if (kmlData.children.length > 0) {
+                extensions.appendChild(kmlData);
+                element.appendChild(extensions);
+            }
+        }
+
+        function showProgress() {
+            document.getElementById('progressBar').style.display = 'block';
+            updateProgress(0);
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressFill').style.width = percent + '%';
+        }
+
+        function hideProgress() {
+            document.getElementById('progressBar').style.display = 'none';
+        }
+
+        function showConversionSuccess() {
+            const stats = convertedData.stats;
+            const statsHtml = `
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.waypoints}</div>
+                        <div class="stat-label">Waypoints</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.tracks}</div>
+                        <div class="stat-label">Tracks</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.routes}</div>
+                        <div class="stat-label">Rotas</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.totalPoints}</div>
+                        <div class="stat-label">Total de Pontos</div>
+                    </div>
+                </div>
+                <button class="download-btn" onclick="downloadGpx()">
+                    📥 Baixar arquivo GPX
+                </button>
+            `;
+            
+            showResult('✅ Conversão realizada com sucesso!<br><br>' + statsHtml, 'success');
+        }
+
+        function downloadGpx() {
+            if (!convertedData) return;
+
+            const blob = new Blob([convertedData.content], { type: 'application/gpx+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = convertedData.filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showResult(message, type) {
+            const result = document.getElementById('result');
+            result.innerHTML = message;
+            result.className = `result ${type}`;
+            result.style.display = 'block';
+        }
+
+        function hideResult() {
+            document.getElementById('result').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
