@@ -6,40 +6,64 @@
 <style>
 body {font-family: sans-serif; background: #0b0f19; color: #fff; text-align: center; padding: 20px;}
 input {margin: 20px 0;}
-textarea {width: 80%; height: 300px; margin-top: 20px; background: #121829; color: #0f0; border: none; padding: 10px;}
-button {background: #22c55e; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer;}
+textarea {width: 90%; height: 300px; margin-top: 20px; background: #121829; color: #0f0; border: none; padding: 10px;}
+button {background: #22c55e; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 4px;}
+.small {font-size: 12px; color: #9aa4b2;}
 </style>
 </head>
 <body>
 <h1>Gerador de routes.json</h1>
-<p>Selecione seus arquivos GPX para gerar o JSON:</p>
+<p>Selecione seus arquivos GPX para gerar o JSON e baixar tudo como ZIP.</p>
 <input type="file" id="fileInput" multiple accept=".gpx">
 <br>
-<button onclick="downloadJSON()">Baixar routes.json</button>
+<button id="downloadJson">Baixar routes.json</button>
+<button id="downloadZip">Baixar ZIP (GPX + routes.json)</button>
 <br>
 <textarea id="output" readonly></textarea>
+<p class="small">
+  Observação: para enviar automaticamente para o servidor é necessário backend (API).
+  Sem backend, faça upload manual do ZIP para a pasta <b>routes/</b>.
+</p>
 
 <script>
 let routes = [];
+let files = [];
 
 document.getElementById('fileInput').addEventListener('change', function(e) {
     routes = [];
-    for (let file of e.target.files) {
-        routes.push({
-            file: file.name,
-            name: file.name.replace('.gpx', '')
-        });
+    files = Array.from(e.target.files);
+    for (let file of files) {
+        routes.push({ file: file.name, name: file.name.replace(/\\.gpx$/i, '') });
     }
     document.getElementById('output').value = JSON.stringify(routes, null, 2);
 });
 
-function downloadJSON() {
+document.getElementById('downloadJson').addEventListener('click', function() {
     const blob = new Blob([JSON.stringify(routes, null, 2)], {type: "application/json"});
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = "routes.json";
     link.click();
-}
+});
+
+document.getElementById('downloadZip').addEventListener('click', async function() {
+    const s = document.createElement('script');
+    s.src = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
+    s.onload = async () => {
+        const zip = new JSZip();
+        zip.file("routes.json", JSON.stringify(routes, null, 2));
+        for (let f of files) {
+            const data = await f.arrayBuffer();
+            zip.file(f.name, data);
+        }
+        const content = await zip.generateAsync({type:"blob"});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(content);
+        a.download = "routes_package.zip";
+        a.click();
+    };
+    document.body.appendChild(s);
+});
 </script>
 </body>
 </html>

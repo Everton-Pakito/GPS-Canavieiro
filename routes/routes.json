@@ -1,3 +1,6 @@
 [
-  {"file":"sample.gpx","name":"Exemplo"}
+  {
+    "file": "sample.gpx",
+    "name": "Exemplo"
+  }
 ]
